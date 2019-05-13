@@ -87,7 +87,8 @@ function! lsp#ui#vim#definition() abort
         return
     endif
 
-    let l:ctx = { 'counter': len(l:servers), 'list':[], 'last_req_id': s:last_req_id, 'jump_if_one': 1 }
+    let l:ctx = { 'counter': len(l:servers), 'list':[], 'last_req_id': s:last_req_id,
+        \ 'jump_if_one': 1, 'position': [bufnr('%'), line('.'), col('.'), 0] }
     for l:server in l:servers
         call lsp#send_request(l:server, {
             \ 'method': 'textDocument/definition',
@@ -446,6 +447,15 @@ function! s:handle_location(ctx, server, type, data) abort "ctx = {counter, list
                 endif
                 execute l:cmd . ' | call cursor('.l:loc['lnum'].','.l:loc['col'].')'
                 echo 'Retrieved ' . a:type
+
+                " Save old position on the stack
+                if has_key(a:ctx, 'position')
+                    let l:winid = win_getid()
+                    let l:stlen = gettagstack(winid)['length'] + 2
+                    call settagstack(l:winid, {'items': [{'from': a:ctx['position'], 'tagname': expand('<cword>')}],
+                        \ 'curidx': l:stlen}, 'a')
+                endif
+
                 redraw
             else
                 call setqflist(a:ctx['list'])
